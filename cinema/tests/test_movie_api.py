@@ -72,10 +72,10 @@ class MovieImageUploadTests(TestCase):
         self.anon_client = APIClient()
         self.client = APIClient()
         self.ordinary_client = APIClient()
-        self.user = get_user_model().objects.create_superuser(
+        self.user_admin = get_user_model().objects.create_superuser(
             "admin@myproject.com", "password"
         )
-        self.client.force_authenticate(self.user)
+        self.client.force_authenticate(self.user_admin)
         self.user = get_user_model().objects.create_user(
             "user@myproject.com", "password"
         )
@@ -233,7 +233,7 @@ class MovieViewSetTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_anonim_user_auth_required_to_read_movie_detail(self):
-        res = self.anon_client.get(MOVIE_URL + "1/")
+        res = self.anon_client.get(detail_url(self.movie.id))
 
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -258,10 +258,10 @@ class MovieViewSetTests(TestCase):
         self.assertEqual(res.data, serializer.data)
 
     def test_user_read_movie_detail(self):
-        res = self.ordinary_client.get(MOVIE_URL + "1/")
-
-        movie = Movie.objects.get(pk=1)
+        movie = self.movie
         serializer = MovieDetailSerializer(movie)
+
+        res = self.ordinary_client.get(detail_url(movie.id))
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data, serializer.data)
@@ -287,10 +287,10 @@ class MovieViewSetTests(TestCase):
         self.assertEqual(res.data, serializer.data)
 
     def test_admin_user_read_movie_detail(self):
-        res = self.admin_client.get(MOVIE_URL + "1/")
-
-        movie = Movie.objects.get(pk=1)
+        movie = self.movie
         serializer = MovieDetailSerializer(movie)
+
+        res = self.admin_client.get(detail_url(movie.id))
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data, serializer.data)
