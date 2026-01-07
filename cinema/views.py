@@ -28,6 +28,10 @@ from cinema.serializers import (
 )
 
 
+def _params_to_ints(qs):
+    """Converts a list of string IDs to a list of integers"""
+    return [int(str_id) for str_id in qs.split(",")]
+
 class GenreViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
@@ -84,11 +88,6 @@ class MovieViewSet(
     serializer_class = MovieSerializer
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
-    @staticmethod
-    def _params_to_ints(qs):
-        """Converts a list of string IDs to a list of integers"""
-        return [int(str_id) for str_id in qs.split(",")]
-
     def get_queryset(self):
         """Retrieve the movies with filters"""
         title = self.request.query_params.get("title")
@@ -101,11 +100,11 @@ class MovieViewSet(
             queryset = queryset.filter(title__icontains=title)
 
         if genres:
-            genres_ids = self._params_to_ints(genres)
+            genres_ids = _params_to_ints(genres)
             queryset = queryset.filter(genres__id__in=genres_ids)
 
         if actors:
-            actors_ids = self._params_to_ints(actors)
+            actors_ids = _params_to_ints(actors)
             queryset = queryset.filter(actors__id__in=actors_ids)
 
         return queryset.distinct()
@@ -191,7 +190,7 @@ class MovieSessionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         date = self.request.query_params.get("date")
-        movie_id_str = self.request.query_params.get("movie")
+        movies_id_str = self.request.query_params.get("movies")
 
         queryset = self.queryset
 
@@ -199,8 +198,9 @@ class MovieSessionViewSet(viewsets.ModelViewSet):
             date = datetime.strptime(date, "%Y-%m-%d").date()
             queryset = queryset.filter(show_time__date=date)
 
-        if movie_id_str:
-            queryset = queryset.filter(movie_id=int(movie_id_str))
+        if movies_id_str:
+            movies_ids = _params_to_ints(movies_id_str)
+            queryset = queryset.filter(movie_id__in=movies_ids)
 
         return queryset
 
@@ -223,10 +223,10 @@ class MovieSessionViewSet(viewsets.ModelViewSet):
                 type=str,
             ),
             OpenApiParameter(
-                name="movie",
-                description="Filter by movie ID (example: ?movie=1)",
+                name="movies",
+                description="Filter by movies IDs (example: ?movie=1,2)",
                 required=False,
-                type=int,
+                type={"type": "array", "items": {"type": "integer"}},
                 explode=False,
                 style="form",
             ),
